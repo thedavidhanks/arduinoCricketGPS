@@ -9,10 +9,18 @@
 // 3x GREEN -> 3 green blinks indicates a successful connection to the server
 // 
 //CONFIGURATION:
-const char serveraddress[] = "site.com";
-const char passcode[] = "code";  //the passcode of the ArduinoGPS tracker which is looked up and verified by the server.  
-const char* ssida[] = {"ssid1","ssid2"};
-const char* passworda[] = {"pass1","pass2"};
+const char serveraddress[] = "tdh-scripts.herokuapp.com";
+const char passcode[] = "TaxaCricKetCHIRP";  //the passcode of the ArduinoGPS tracker which is looked up and verified by the server.  
+
+struct wifiInfo {
+  const char* ssid;
+  const char* password;
+};
+
+struct wifiInfo wifis[] = { 
+  {"ssid1","password1"},
+  {"ssid2", "password2"}
+};
 
 //GPS
 #include "TinyGPS++.h"
@@ -146,11 +154,11 @@ void connectWifi(){
 
   while(WiFi.status() != WL_CONNECTED){
     i = 0;
-    for ( i = 0; i < sizeof(ssida); i++){
+    for ( i = 0; i < sizeof(wifis); i++){
       int attempts = 0;
       Serial.print("\nAttempting to connect to WiFi SSIDa: ");
-      Serial.println(ssida[i]);
-      WiFi.begin(ssida[i], passworda[i]);
+      Serial.println(wifis[i].ssid);
+      WiFi.begin(wifis[i].ssid, wifis[i].password);
   
       while(WiFi.status() != WL_CONNECTED && attempts <= (max_seconds*2)) {
         delay(500);
@@ -161,7 +169,7 @@ void connectWifi(){
       }
       if(WiFi.status()== WL_CONNECTED ){ break; }
       Serial.print("\nFAILED to connect to WiFi SSID: ");
-      Serial.println(ssida[i]);
+      Serial.println(wifis[i].ssid);
     }
   }
   
