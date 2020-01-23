@@ -9,8 +9,8 @@
 // 3x GREEN -> 3 green blinks indicates a successful connection to the server
 // 
 //CONFIGURATION:
-const char serveraddress[] = "tdh-scripts.herokuapp.com";
-const char passcode[] = "TaxaCricKetCHIRP";  //the passcode of the ArduinoGPS tracker which is looked up and verified by the server.  
+const char serveraddress[] = "site.com";
+const char passcode[] = "code";  //the passcode of the ArduinoGPS tracker which is looked up and verified by the server.  
 
 struct wifiInfo {
   const char* ssid;
@@ -19,7 +19,8 @@ struct wifiInfo {
 
 struct wifiInfo wifis[] = { 
   {"ssid1","password1"},
-  {"ssid2", "password2"}
+  {"ssid2", "password2"},
+  
 };
 
 //GPS
@@ -147,30 +148,47 @@ void loop() {
   Serial.print(".");
 }
 
-//Attempt to connect to each SSID in sssida for max_seconds, then try the next
+//Look though available SSIDs for one that is known, then try to connect to it for max_seconds
 void connectWifi(){
-  int i;
   int max_seconds = 30;
 
   while(WiFi.status() != WL_CONNECTED){
-    i = 0;
-    for ( i = 0; i < sizeof(wifis); i++){
-      int attempts = 0;
-      Serial.print("\nAttempting to connect to WiFi SSIDa: ");
-      Serial.println(wifis[i].ssid);
-      WiFi.begin(wifis[i].ssid, wifis[i].password);
-  
-      while(WiFi.status() != WL_CONNECTED && attempts <= (max_seconds*2)) {
-        delay(500);
-        //Serial.print(".");
-        Serial.print(attempts);
-        Serial.print(".");
-        attempts += 1;
-      }
+    //find available networks
+    int n = WiFi.scanNetworks();
+    String scanComplete1 = "Wifi scan complete. Found ";
+    String scanComplete2 = " networks.";
+    Serial.println( scanComplete1 + n + scanComplete2);
+    for( int j = 0; j < n ; j++){
+      int i = 0;
+      Serial.print("SSID: ");
+      Serial.print(WiFi.SSID(j));
+      Serial.print("\tstength: ");
+      Serial.println(WiFi.RSSI(j));
+      
+      //check if scanned wifi is a known wifi
+      for ( i = 0; i < sizeof(wifis); i++){
+        if(WiFi.SSID(j) == wifis[i].ssid){
+          int attempts = 0;
+          
+          Serial.print("\nAttempting to connect to WiFi SSID: ");
+          Serial.println(wifis[i].ssid);
+          
+          WiFi.begin(wifis[i].ssid, wifis[i].password);
+          
+          //try for max_secondds to connect, then move to the next wifi
+          while(WiFi.status() != WL_CONNECTED && attempts <= (max_seconds*2)) {
+            Serial.print(attempts);
+            Serial.print(".");
+            attempts += 1;
+            delay(500);
+          }
+          if(WiFi.status()== WL_CONNECTED ){ break; }
+          Serial.print("\nFAILED to connect to WiFi SSID: ");
+          Serial.println(wifis[i].ssid);
+        }
+      } 
       if(WiFi.status()== WL_CONNECTED ){ break; }
-      Serial.print("\nFAILED to connect to WiFi SSID: ");
-      Serial.println(wifis[i].ssid);
-    }
+    }    
   }
   
   Serial.println("");
