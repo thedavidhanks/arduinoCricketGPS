@@ -9,8 +9,8 @@
 // 3x GREEN -> 3 green blinks indicates a successful connection to the server
 // 
 //CONFIGURATION:
-const char serveraddress[] = "site.com";
-const char passcode[] = "code";  //the passcode of the ArduinoGPS tracker which is looked up and verified by the server.  
+const char* serveraddress = "tdh-scripts.herokuapp.com";
+const char passcode[] = "TaxaCricKetCHIRP";  //the passcode of the ArduinoGPS tracker which is looked up and verified by the server.  
 
 struct wifiInfo {
   const char* ssid;
@@ -18,9 +18,12 @@ struct wifiInfo {
 };
 
 struct wifiInfo wifis[] = { 
-  {"ssid1","password1"},
-  {"ssid2", "password2"},
-  
+  {"MADhouse","1234554321"},
+  {"noMAD Wifi", "1234554321"},
+  {"noMAD Cell", "1234554321"},
+  {"OTC", "D33pW@t3r"},
+  {"OTC Guest", "Welcome!"},
+  {"ThisGuy", "davephone321"}  
 };
 
 //GPS
@@ -30,7 +33,8 @@ TinyGPSPlus gps;
 #include "SoftwareSerial.h"
 #define rxPin D3
 #define txPin D4
-SoftwareSerial gpsDevice(rxPin,txPin); //RX, TX
+SoftwareSerial gpsDevice(rxPin, txPin); //RX, TX
+char gpsDeviceFound;
 
 //Wireless
 #include <ESP8266WiFi.h>
@@ -49,6 +53,9 @@ time_t epoch_ts;
 String webpage;
 
 void setup() {
+  Serial.begin(115200);
+  gpsDevice.begin(9600);
+  
   //Configure LED
   pinMode(GREENLED,OUTPUT);  
   pinMode(REDLED,OUTPUT);
@@ -60,92 +67,98 @@ void setup() {
   digitalWrite(GREENLED, LOW);
   digitalWrite(REDLED, HIGH);
 
-  Serial.begin(9600);
-  gpsDevice.begin(9600);
-  
-
   //Connect to Wifi
   connectWifi();
 }
 
 void loop() {
-  while(gpsDevice.available() > 0 ){
-    if(gps.encode(gpsDevice.read())){
-      if(gps.location.isUpdated()){
-        //check for WiFi connection
-        if(WiFi.status()== !WL_CONNECTED ){
-          connectWifi();
-        }
-        Serial.println(String(gps.location.lat(),6)+","+String(gps.location.lng(),6));
+  if(gpsDevice.available() > 0 ){
+    if(gpsDeviceFound != '+'){
+      Serial.print("\n");  
+    }
+    gpsDeviceFound = '+';
+    Serial.print(gpsDeviceFound);
+    
+    gps.encode(gpsDevice.read());
+    if(gps.location.isUpdated()){
+      //check for WiFi connection
+      if(WiFi.status()== !WL_CONNECTED ){
+        connectWifi();
+      }
+      Serial.println(String(gps.location.lat(),6)+","+String(gps.location.lng(),6));
 
-        //Create a unix timestamp
-        tm.Second = gps.time.second();
-        tm.Minute = gps.time.minute();
-        tm.Hour = gps.time.hour();
-        tm.Day = gps.date.day();
-        tm.Month = gps.date.month();
-        tm.Year = gps.date.year() - 1970;
-        epoch_ts = makeTime(tm);
+      //Create a unix timestamp
+      tm.Second = gps.time.second();
+      tm.Minute = gps.time.minute();
+      tm.Hour = gps.time.hour();
+      tm.Day = gps.date.day();
+      tm.Month = gps.date.month();
+      tm.Year = gps.date.year() - 1970;
+      epoch_ts = makeTime(tm);
 
-        //get the speed.
-        Serial.println("speed: " + String(gps.speed.mph()) + "mph");
-        Serial.println("altitude: " +String(gps.altitude.feet())+ "feet");
+      //get the speed.
+      Serial.println("speed: " + String(gps.speed.mph()) + "mph");
+      Serial.println("altitude: " +String(gps.altitude.feet())+ "feet");
+      
+      //Create a string to post        
+      String postString = "pass="+String(passcode)+"&lat=" + String(gps.location.lat(),6) 
+        +"&long="+String(gps.location.lng(),6) 
+        +"&timestamp="+String(epoch_ts)
+        +"&speed="+String(gps.speed.mph())
+        +"&alt="+String(gps.altitude.feet());
+      Serial.println("Sending: "+postString);
+      
+      //connect to server
+      Serial.println("\nStarting connection...");
+      if (client.connect(serveraddress, 80)) {
+        Serial.println("Connected to server.");
+        digitalWrite(GREENLED, HIGH);
+        digitalWrite(REDLED, LOW);
         
-        //Create a string to post        
-        String postString = "pass="+String(passcode)+"&lat=" + String(gps.location.lat(),6) 
-          +"&long="+String(gps.location.lng(),6) 
-          +"&timestamp="+String(epoch_ts)
-          +"&speed="+String(gps.speed.mph())
-          +"&alt="+String(gps.altitude.feet());
-        Serial.println("Sending: "+postString);
+        // Make a HTTP POST request:
+        client.println("POST /gps-tracker/ HTTP/1.1"); 
+        client.println("Host: " + String(serveraddress));
+        client.println("Content-Type: application/x-www-form-urlencoded");
+        client.println("Connection: close");
+        client.print("Content-Length: ");
+        client.println(postString.length());
+        client.println();
+        client.print(postString);
+        client.println();    
+
+        //server response
         
-        //connect to server
-        Serial.println("\nStarting connection...");
-        if (client.connect(serveraddress, 80)) {
-          Serial.println("Connected to server.");
-          digitalWrite(GREENLED, HIGH);
-          digitalWrite(REDLED, LOW);
-          
-          // Make a HTTP POST request:
-          client.println("POST /gps-tracker/ HTTP/1.1"); 
-          client.println("Host: " + String(serveraddress));
-          client.println("Content-Type: application/x-www-form-urlencoded");
-          client.println("Connection: close");
-          client.print("Content-Length: ");
-          client.println(postString.length());
-          client.println();
-          client.print(postString);
-          client.println();    
-
-          //server response
-          
-          Serial.print("POST Sent. \nWaiting for response");
-          while(client.available() == 0){
-            Serial.print(".");
-          }
-          
-          webpage = "";
-
-          while (!webpage.endsWith("Connection: close")){
-            char c = client.read();
-            webpage += c;
-            //Serial.println(webpage);
-            //yield();  yields cpu time to other processes
-          }
-          Serial.println(webpage);
-
-//            //If there was a successful response wait before trying again.
-//            //TODO change delay based on speed.
-          if(webpage.indexOf("200 OK") != -1){
-            delay(5000);
-          }
-        } else {
-          Serial.println("connection failed");
+        Serial.print("POST Sent. \nWaiting for response");
+        while(client.available() == 0){
+          Serial.print(".");
         }
+        
+        webpage = "";
+
+        while (!webpage.endsWith("Connection: close")){
+          char c = client.read();
+          webpage += c;
+          //Serial.println(webpage);
+          //yield();  yields cpu time to other processes
+        }
+        Serial.println(webpage);
+
+        //If there was a successful response wait before trying again.
+        //TODO change delay based on speed.
+        if(webpage.indexOf("200 OK") != -1){
+          delay(5000);
+        }
+      } else {
+        Serial.println("connection failed");
       }
     }
+  }else{
+    if(gpsDeviceFound != '.'){
+      Serial.print("\n");  
+    }
+    gpsDeviceFound = '.';
+    Serial.print(gpsDeviceFound);
   }
-  Serial.print(".");
 }
 
 //Look though available SSIDs for one that is known, then try to connect to it for max_seconds
@@ -155,9 +168,10 @@ void connectWifi(){
   while(WiFi.status() != WL_CONNECTED){
     //find available networks
     int n = WiFi.scanNetworks();
-    String scanComplete1 = "Wifi scan complete. Found ";
+    String scanComplete1 = "\nWifi scan complete. Found ";
     String scanComplete2 = " networks.";
     Serial.println( scanComplete1 + n + scanComplete2);
+    WiFi.mode(WIFI_STA);
     for( int j = 0; j < n ; j++){
       int i = 0;
       Serial.print("SSID: ");
