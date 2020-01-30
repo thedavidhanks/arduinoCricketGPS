@@ -74,10 +74,10 @@ void setup() {
 void loop() {
   if(gpsDevice.available() > 0 ){
     if(gpsDeviceFound != '+'){
-      Serial.print("\n");  
+//      Serial.print("\n");  
     }
     gpsDeviceFound = '+';
-    Serial.print(gpsDeviceFound);
+//    Serial.print(gpsDeviceFound);
     
     gps.encode(gpsDevice.read());
     if(gps.location.isUpdated()){
@@ -85,7 +85,6 @@ void loop() {
       if(WiFi.status()== !WL_CONNECTED ){
         connectWifi();
       }
-      Serial.println(String(gps.location.lat(),6)+","+String(gps.location.lng(),6));
 
       //Create a unix timestamp
       tm.Second = gps.time.second();
@@ -96,7 +95,10 @@ void loop() {
       tm.Year = gps.date.year() - 1970;
       epoch_ts = makeTime(tm);
 
-      //get the speed.
+      //show the new info.
+      Serial.println("/n-------New Location---------");
+      Serial.println(String(gps.date.month()) + "-" + String(gps.date.day()) + "-" + String(gps.date.year()) + " " + String(gps.time.hour()) + ":" + String(gps.time.minute()));
+      Serial.println(String(gps.location.lat(),6)+","+String(gps.location.lng(),6));
       Serial.println("speed: " + String(gps.speed.mph()) + "mph");
       Serial.println("altitude: " +String(gps.altitude.feet())+ "feet");
       
@@ -154,10 +156,10 @@ void loop() {
     }
   }else{
     if(gpsDeviceFound != '.'){
-      Serial.print("\n");  
+//      Serial.print("\n");  
     }
     gpsDeviceFound = '.';
-    Serial.print(gpsDeviceFound);
+//    Serial.print(gpsDeviceFound);
   }
 }
 
