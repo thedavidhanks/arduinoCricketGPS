@@ -96,8 +96,9 @@ void loop() {
       epoch_ts = makeTime(tm);
 
       //show the new info.
-      Serial.println("/n-------New Location---------");
-      Serial.println(String(gps.date.month()) + "-" + String(gps.date.day()) + "-" + String(gps.date.year()) + " " + String(gps.time.hour()) + ":" + String(gps.time.minute()));
+      Serial.println();
+      Serial.println("-------Coordinates Updated---------");
+      Serial.println(String(gps.date.month()) + "-" + String(gps.date.day()) + "-" + String(gps.date.year()) + " " + String(gps.time.hour()) + ":" + String(gps.time.minute())+ ":" + String(gps.time.second()));
       Serial.println(String(gps.location.lat(),6)+","+String(gps.location.lng(),6));
       Serial.println("speed: " + String(gps.speed.mph()) + "mph");
       Serial.println("altitude: " +String(gps.altitude.feet())+ "feet");
