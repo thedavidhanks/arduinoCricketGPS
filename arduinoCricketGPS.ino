@@ -5,8 +5,8 @@
 // LED sequence
 // RED -> started
 // GREEN -> connected to wifi
-// 5x RED -> 5 quick red blinks indicate sensor issue .
-// 3x GREEN -> 3 green blinks indicates a successful connection to the server
+// GREEN2 -> connected to gps
+// GREEN2 (blinking) -> sent gps update
 // 
 //CONFIGURATION:
 const char* serveraddress = "tdh-scripts.herokuapp.com";
@@ -18,12 +18,12 @@ struct wifiInfo {
 };
 
 struct wifiInfo wifis[] = { 
-  {"MADhouse","1234554321"},
+  {"noMAD 4G", "1234554321"},
   {"noMAD Wifi", "1234554321"},
-  {"noMAD Cell", "1234554321"},
+  {"ThisGuy", "davephone321"},
+  {"MADhouse","1234554321"},
   {"OTC", "D33pW@t3r"},
-  {"OTC Guest", "Welcome!"},
-  {"ThisGuy", "davephone321"}  
+  {"OTC Guest", "Welcome!"}
 };
 
 //GPS
@@ -41,7 +41,8 @@ char gpsDeviceFound;
 WiFiClient client;
 
 //LED
-#define GREENLED LED_BUILTIN//D1
+#define GREENLED_GPS D0
+#define GREENLED D1
 #define REDLED D2
 
 //Time
@@ -57,6 +58,7 @@ void setup() {
   gpsDevice.begin(9600);
   
   //Configure LED
+  pinMode(GREENLED_GPS,OUTPUT);
   pinMode(GREENLED,OUTPUT);  
   pinMode(REDLED,OUTPUT);
 
@@ -64,6 +66,7 @@ void setup() {
   pinMode(txPin, OUTPUT);
 
   //Setup LEDs initial state.  RED LED indicates on, but not connected.
+  digitalWrite(GREENLED_GPS, LOW);
   digitalWrite(GREENLED, LOW);
   digitalWrite(REDLED, HIGH);
 
@@ -73,6 +76,7 @@ void setup() {
 
 void loop() {
   if(gpsDevice.available() > 0 ){
+    digitalWrite(GREENLED_GPS, HIGH);
     if(gpsDeviceFound != '+'){
 //      Serial.print("\n");  
     }
@@ -83,6 +87,8 @@ void loop() {
     if(gps.location.isUpdated()){
       //check for WiFi connection
       if(WiFi.status()== !WL_CONNECTED ){
+        digitalWrite(GREENLED, LOW);
+        digitalWrite(REDLED, HIGH);
         connectWifi();
       }
 
@@ -115,8 +121,6 @@ void loop() {
       Serial.println("\nStarting connection...");
       if (client.connect(serveraddress, 80)) {
         Serial.println("Connected to server.");
-        digitalWrite(GREENLED, HIGH);
-        digitalWrite(REDLED, LOW);
         
         // Make a HTTP POST request:
         client.println("POST /gps-tracker/ HTTP/1.1"); 
@@ -128,7 +132,8 @@ void loop() {
         client.println();
         client.print(postString);
         client.println();    
-
+        blink(GREENLED_GPS, 10, 500);
+        
         //server response
         
         Serial.print("POST Sent. \nWaiting for response");
@@ -156,6 +161,7 @@ void loop() {
       }
     }
   }else{
+    digitalWrite(GREENLED_GPS, LOW);
     if(gpsDeviceFound != '.'){
 //      Serial.print("\n");  
     }
@@ -212,4 +218,21 @@ void connectWifi(){
   Serial.println("WiFi connected");
   digitalWrite(GREENLED, HIGH);
   digitalWrite(REDLED, LOW);
+}
+
+void blink(int color, int times, int hold=250){
+  int previous_state = digitalRead(color);
+  //turn the LED off.
+  digitalWrite(color,LOW);
+  
+  //blink {color} LED {times} times for {hold} msec
+  // color should be GREENLED or REDLED
+  for(int x = 0; x < times; x++){
+    digitalWrite(color, HIGH);
+    delay(hold);
+    digitalWrite(color, LOW);
+    delay(hold);
+  }
+  //return to the prior state.
+  digitalWrite(color,previous_state);
 }
