@@ -5,8 +5,9 @@
 // LED sequence
 // RED -> started
 // GREEN -> connected to wifi
-// GREEN2 -> connected to gps
-// GREEN2 (blinking) -> sent gps update
+// GREEN_GPS -> connected to gps
+// GREEN_GPS (blinking quickly) -> sent gps update
+// GREEN_GPS (5 slow blinks) -> received success from server.
 // 
 //CONFIGURATION:
 const char* serveraddress = "tdh-scripts.herokuapp.com";
@@ -43,8 +44,8 @@ char gpsDeviceFound;
 WiFiClient client;
 
 //LED
-#define GREENLED_GPS D0
-#define GREENLED D1
+#define GREENLED_GPS D1
+#define GREENLED D0
 #define REDLED D2
 
 //Time
@@ -134,7 +135,7 @@ void loop() {
         client.println();
         client.print(postString);
         client.println();    
-        blink(GREENLED_GPS, 10, 500);
+        blink(GREENLED_GPS, 15, 100);
         
         //server response
         
@@ -156,6 +157,8 @@ void loop() {
         //If there was a successful response wait before trying again.
         //TODO change delay based on speed.
         if(webpage.indexOf("200 OK") != -1){
+          blink(GREENLED_GPS, 5, 250);
+          digitalWrite(GREENLED_GPS, LOW);
           delay(delay_ms);
         }
       } else {
