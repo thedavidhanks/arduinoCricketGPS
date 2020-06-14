@@ -11,6 +11,10 @@
 //CONFIGURATION:
 const char* serveraddress = "tdh-scripts.herokuapp.com";
 const char passcode[] = "TaxaCricKetCHIRP";  //the passcode of the ArduinoGPS tracker which is looked up and verified by the server.  
+const int delay_min = 10; //time in minutes to delay between gps Posts
+const int delay_ms = delay_min*60*1000;
+
+void blink(int, int, int);
 
 struct wifiInfo {
   const char* ssid;
@@ -21,9 +25,7 @@ struct wifiInfo wifis[] = {
   {"noMAD 4G", "1234554321"},
   {"noMAD Wifi", "1234554321"},
   {"ThisGuy", "davephone321"},
-  {"MADhouse","1234554321"},
-  {"OTC", "D33pW@t3r"},
-  {"OTC Guest", "Welcome!"}
+  {"MADhouse","1234554321"}
 };
 
 //GPS
@@ -78,10 +80,10 @@ void loop() {
   if(gpsDevice.available() > 0 ){
     digitalWrite(GREENLED_GPS, HIGH);
     if(gpsDeviceFound != '+'){
-//      Serial.print("\n");  
+      Serial.print("\n");  
     }
     gpsDeviceFound = '+';
-//    Serial.print(gpsDeviceFound);
+    Serial.print(gpsDeviceFound);
     
     gps.encode(gpsDevice.read());
     if(gps.location.isUpdated()){
@@ -136,7 +138,7 @@ void loop() {
         
         //server response
         
-        Serial.print("POST Sent. \nWaiting for response");
+        Serial.print("POST Sent. \nWaiting for response\n");
         while(client.available() == 0){
           Serial.print(".");
         }
@@ -154,19 +156,19 @@ void loop() {
         //If there was a successful response wait before trying again.
         //TODO change delay based on speed.
         if(webpage.indexOf("200 OK") != -1){
-          delay(5000);
+          delay(delay_ms);
         }
       } else {
-        Serial.println("connection failed");
+        Serial.println("connection to post server failed");
       }
     }
   }else{
     digitalWrite(GREENLED_GPS, LOW);
     if(gpsDeviceFound != '.'){
-//      Serial.print("\n");  
+      Serial.print("\n");  
     }
     gpsDeviceFound = '.';
-//    Serial.print(gpsDeviceFound);
+    Serial.print(gpsDeviceFound);
   }
 }
 
