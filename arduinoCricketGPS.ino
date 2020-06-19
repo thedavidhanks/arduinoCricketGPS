@@ -16,6 +16,7 @@ const int delay_min = 10; //time in minutes to delay between gps Posts
 const int delay_ms = delay_min*60*1000;
 
 void blink(int, int, int);
+void blinkGreen(int);
 
 struct wifiInfo {
   const char* ssid;
@@ -26,7 +27,8 @@ struct wifiInfo wifis[] = {
   {"noMAD 4G", "1234554321"},
   {"noMAD Wifi", "1234554321"},
   {"ThisGuy", "davephone321"},
-  {"MADhouse","1234554321"}
+  {"MADhouse","1234554321"},
+  {"SBG7580AC-3C58", "3W2338100451"}
 };
 
 //GPS
@@ -47,6 +49,9 @@ WiFiClient client;
 #define GREENLED_GPS D1
 #define GREENLED D0
 #define REDLED D2
+
+#define SLOW_BLINK 1000
+#define FAST_BLINK 500
 
 //Time
 #include <Time.h>
@@ -177,14 +182,15 @@ void loop() {
 
 //Look though available SSIDs for one that is known, then try to connect to it for max_seconds
 void connectWifi(){
-  int max_seconds = 30;
+  int max_seconds = 30000;
 
   while(WiFi.status() != WL_CONNECTED){
     //find available networks
+    blinkGreen(SLOW_BLINK);
     int n = WiFi.scanNetworks();
     //String scanComplete1 = "\nWifi scan complete. Found ";
     //String scanComplete2 = " networks.";
-    Serial.printf( "\nWifi scan complete. Found %i networks.", n);
+    Serial.printf( "\nWifi scan complete. Found %i networks.\n", n);
     WiFi.mode(WIFI_STA);
     for( int j = 0; j < n ; j++){
       int i = 0;
@@ -195,31 +201,31 @@ void connectWifi(){
       
       //check if scanned wifi is a known wifi
       for ( i = 0; i < (sizeof(wifis)/sizeof(wifis[0])); i++){
-        digitalWrite(GREENLED, LOW);
+        
         if(WiFi.SSID(j) == wifis[i].ssid){
           int attempts = 0;
           
           Serial.print("\nAttempting to connect to WiFi SSID: ");
           Serial.println(wifis[i].ssid);
-          
+
+          unsigned long startConnectTime = millis();
           WiFi.begin(wifis[i].ssid, wifis[i].password);
           
           //try for max_secondds to connect, then move to the next wifi
-          while(WiFi.status() != WL_CONNECTED && attempts <= (max_seconds*2)) {
-            digitalWrite(GREENLED, HIGH);
-            Serial.print(attempts);
-            Serial.print(".");
-            attempts += 1;
-            delay(500);
-            digitalWrite(GREENLED, LOW);
+          while(WiFi.status() != WL_CONNECTED && ((millis() - startConnectTime) < max_seconds)) {
+            blinkGreen(FAST_BLINK);
+            delay(50);
           }
+          
           if(WiFi.status()== WL_CONNECTED ){ break; }
           Serial.print("\nFAILED to connect to WiFi SSID: ");
           Serial.println(wifis[i].ssid);
         }
-        digitalWrite(GREENLED, LOW);
+        
       } 
-      if(WiFi.status()== WL_CONNECTED ){ break; }
+      if(WiFi.status()== WL_CONNECTED ){ 
+        digitalWrite(GREENLED, HIGH);
+        break; }
     }    
   }
   
@@ -242,6 +248,20 @@ void blink(int color, int times, int hold=250){
     digitalWrite(color, LOW);
     delay(hold);
   }
-  //return to the prior state.
-  digitalWrite(color,previous_state);
+
+  digitalWrite(color, previous_state);
+}
+
+void blinkGreen(int blinkPeriod){
+  static int previous_state = LOW;
+  static unsigned long lastSwitch = 0;
+
+  if((millis() - lastSwitch) > blinkPeriod)
+  {
+     int next_state = previous_state == LOW ? HIGH : LOW;
+     digitalWrite(GREENLED, next_state);
+     previous_state = next_state;
+     lastSwitch = millis();
+  }
+  
 }
