@@ -182,9 +182,9 @@ void connectWifi(){
   while(WiFi.status() != WL_CONNECTED){
     //find available networks
     int n = WiFi.scanNetworks();
-    String scanComplete1 = "\nWifi scan complete. Found ";
-    String scanComplete2 = " networks.";
-    Serial.println( scanComplete1 + n + scanComplete2);
+    //String scanComplete1 = "\nWifi scan complete. Found ";
+    //String scanComplete2 = " networks.";
+    Serial.printf( "\nWifi scan complete. Found %i networks.", n);
     WiFi.mode(WIFI_STA);
     for( int j = 0; j < n ; j++){
       int i = 0;
@@ -194,7 +194,8 @@ void connectWifi(){
       Serial.println(WiFi.RSSI(j));
       
       //check if scanned wifi is a known wifi
-      for ( i = 0; i < sizeof(wifis); i++){
+      for ( i = 0; i < (sizeof(wifis)/sizeof(wifis[0])); i++){
+        digitalWrite(GREENLED, LOW);
         if(WiFi.SSID(j) == wifis[i].ssid){
           int attempts = 0;
           
@@ -205,15 +206,18 @@ void connectWifi(){
           
           //try for max_secondds to connect, then move to the next wifi
           while(WiFi.status() != WL_CONNECTED && attempts <= (max_seconds*2)) {
+            digitalWrite(GREENLED, HIGH);
             Serial.print(attempts);
             Serial.print(".");
             attempts += 1;
             delay(500);
+            digitalWrite(GREENLED, LOW);
           }
           if(WiFi.status()== WL_CONNECTED ){ break; }
           Serial.print("\nFAILED to connect to WiFi SSID: ");
           Serial.println(wifis[i].ssid);
         }
+        digitalWrite(GREENLED, LOW);
       } 
       if(WiFi.status()== WL_CONNECTED ){ break; }
     }    
